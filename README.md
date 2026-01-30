@@ -31,12 +31,18 @@ cd gamesapx
 npm install
 ```
 
-3. Start the server:
+3. (Optional) Set environment variables for production:
+```bash
+export SESSION_SECRET="your-secure-random-secret-key"
+export NODE_ENV="production"
+```
+
+4. Start the server:
 ```bash
 npm start
 ```
 
-4. Open your browser and navigate to:
+5. Open your browser and navigate to:
 ```
 http://localhost:3000
 ```
@@ -90,11 +96,18 @@ gamesapx/
 
 ## Usage
 
-1. **Register**: Create a new account on the home page
+1. **Register**: Create a new account on the home page (minimum 8 characters for password)
 2. **Login**: Use your credentials to access the dashboard
 3. **Play Games**: Click on any game card to start playing
 4. **View Scores**: Navigate to "My Scores" tab to see your game history
 5. **Admin**: Login as admin to add or remove games
+
+## Security Notes
+
+- **Session Secret**: Change the default session secret in production by setting the `SESSION_SECRET` environment variable
+- **Password Requirements**: Passwords must be at least 8 characters long
+- **HTTPS**: Enable HTTPS in production for secure cookie transmission
+- **Admin Access**: Change the default admin password immediately after deployment
 
 ## License
 

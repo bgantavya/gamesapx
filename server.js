@@ -71,10 +71,14 @@ function initDatabase() {
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
-  secret: 'gamesapx-secret-key-2024',
+  secret: process.env.SESSION_SECRET || 'gamesapx-secret-key-2024-change-in-production',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 hours
+  cookie: { 
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production'
+  }
 }));
 app.use(express.static('public'));
 
@@ -103,6 +107,17 @@ app.post('/api/register', async (req, res) => {
     return res.status(400).json({ error: 'All fields are required' });
   }
 
+  // Validate password strength
+  if (password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     db.run(
@@ -110,10 +125,7 @@ app.post('/api/register', async (req, res) => {
       [username, hashedPassword, email],
       function(err) {
         if (err) {
-          if (err.message.includes('UNIQUE')) {
-            return res.status(400).json({ error: 'Username or email already exists' });
-          }
-          return res.status(500).json({ error: 'Registration failed' });
+          return res.status(400).json({ error: 'Registration failed. Username or email may already exist.' });
         }
         res.json({ message: 'Registration successful', userId: this.lastID });
       }
@@ -165,8 +177,12 @@ app.post('/api/login', (req, res) => {
 
 // User logout endpoint
 app.post('/api/logout', (req, res) => {
-  req.session.destroy();
-  res.json({ message: 'Logout successful' });
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ message: 'Logout successful' });
+  });
 });
 
 // Get current user
