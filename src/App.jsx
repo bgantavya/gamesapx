@@ -3,9 +3,9 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Admin from './pages/Admin';
-import MemoryGame from './components/games/MemoryGame';
-import TicTacToe from './components/games/TicTacToe';
-import SnakeGame from './components/games/SnakeGame';
+import MemoryGame from './games/MemoryGame';
+import TicTacToe from './games/TicTacToe';
+import SnakeGame from './games/SnakeGame';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
