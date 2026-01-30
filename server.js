@@ -20,47 +20,51 @@ const db = new sqlite3.Database('./gamesapx.db', (err) => {
 
 // Initialize database tables
 function initDatabase() {
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
-    is_admin INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+  db.serialize(() => {
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      is_admin INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS games (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL,
-    description TEXT,
-    thumbnail TEXT,
-    file_path TEXT NOT NULL,
-    is_active INTEGER DEFAULT 1,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+    db.run(`CREATE TABLE IF NOT EXISTS games (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      description TEXT,
+      thumbnail TEXT,
+      file_path TEXT NOT NULL,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
 
-  db.run(`CREATE TABLE IF NOT EXISTS scores (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    game_id INTEGER NOT NULL,
-    score INTEGER NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (game_id) REFERENCES games(id)
-  )`);
+    db.run(`CREATE TABLE IF NOT EXISTS scores (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      game_id INTEGER NOT NULL,
+      score INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (game_id) REFERENCES games(id)
+    )`);
 
-  // Insert default admin user (username: admin, password: admin123)
-  const adminHash = bcrypt.hashSync('admin123', 10);
-  db.run(`INSERT OR IGNORE INTO users (username, password, email, is_admin) 
-          VALUES ('admin', ?, 'admin@gamesapx.com', 1)`, [adminHash]);
+    // Insert default admin user (username: admin, password: admin123)
+    const adminHash = bcrypt.hashSync('admin123', 10);
+    db.run(`INSERT OR IGNORE INTO users (username, password, email, is_admin) 
+            VALUES ('admin', ?, 'admin@gamesapx.com', 1)`, [adminHash]);
 
-  // Insert default games
-  db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
-          VALUES ('Tic-Tac-Toe', 'Classic Tic-Tac-Toe game', '/images/tictactoe.png', '/games/tictactoe.html')`);
-  db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
-          VALUES ('Snake', 'Classic Snake game', '/images/snake.png', '/games/snake.html')`);
-  db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
-          VALUES ('Memory Match', 'Memory card matching game', '/images/memory.png', '/games/memory.html')`);
+    // Insert default games
+    db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
+            VALUES ('Tic-Tac-Toe', 'Classic Tic-Tac-Toe game', '/images/tictactoe.png', '/games/tictactoe.html')`);
+    db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
+            VALUES ('Snake', 'Classic Snake game', '/images/snake.png', '/games/snake.html')`);
+    db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
+            VALUES ('Memory Match', 'Memory card matching game', '/images/memory.png', '/games/memory.html')`);
+    
+    console.log('Database initialized successfully');
+  });
 }
 
 // Middleware
