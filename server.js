@@ -1,15 +1,19 @@
-const express = require('express');
-const session = require('express-session');
-const bodyParser = require('body-parser');
-const bcrypt = require('bcrypt');
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+import express from 'express';
+import session from 'express-session';
+import bodyParser from 'body-parser';
+import bcrypt from 'bcrypt';
+import sqlite3 from 'sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Database setup
-const db = new sqlite3.Database('./gamesapx.db', (err) => {
+const db = new (sqlite3.verbose().Database)('./gamesapx.db', (err) => {
   if (err) {
     console.error('Error opening database:', err.message);
   } else {
@@ -56,12 +60,12 @@ function initDatabase() {
             VALUES ('admin', ?, 'admin@gamesapx.com', 1)`, [adminHash]);
 
     // Insert default games
-    db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
-            VALUES ('Tic-Tac-Toe', 'Classic Tic-Tac-Toe game', '/images/tictactoe.png', '/games/tictactoe.html')`);
-    db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
-            VALUES ('Snake', 'Classic Snake game', '/images/snake.png', '/games/snake.html')`);
-    db.run(`INSERT OR IGNORE INTO games (name, description, thumbnail, file_path) 
-            VALUES ('Memory Match', 'Memory card matching game', '/images/memory.png', '/games/memory.html')`);
+    db.run(`INSERT OR IGNORE INTO games (id, name, description, file_path) 
+            VALUES (1, 'Tic-Tac-Toe', 'Classic Tic-Tac-Toe game', '/games/tictactoe')`);
+    db.run(`INSERT OR IGNORE INTO games (id, name, description, file_path) 
+            VALUES (2, 'Snake', 'Classic Snake game', '/games/snake')`);
+    db.run(`INSERT OR IGNORE INTO games (id, name, description, file_path) 
+            VALUES (3, 'Memory Match', 'Memory card matching game', '/games/memory')`);
     
     console.log('Database initialized successfully');
   });
@@ -80,7 +84,13 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production'
   }
 }));
-app.use(express.static('public'));
+
+// Serve static files - React build in production, public folder for games
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, 'dist')));
+} else {
+  app.use(express.static('public'));
+}
 
 // Authentication middleware
 function requireAuth(req, res, next) {
@@ -273,6 +283,25 @@ app.get('/api/user/scores', requireAuth, (req, res) => {
   );
 });
 
+// Get global leaderboard (all games)
+app.get('/api/leaderboard', (req, res) => {
+  db.all(
+    `SELECT g.name as game_name, u.username, MAX(s.score) as score, s.user_id
+     FROM scores s 
+     JOIN users u ON s.user_id = u.id 
+     JOIN games g ON s.game_id = g.id 
+     GROUP BY g.id, u.id
+     ORDER BY g.name, score DESC`,
+    [],
+    (err, scores) => {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to fetch leaderboard' });
+      }
+      res.json(scores);
+    }
+  );
+});
+
 // Admin: Add a new game
 app.post('/api/admin/games', requireAdmin, (req, res) => {
   const { name, description, thumbnail, filePath } = req.body;
@@ -322,18 +351,29 @@ app.get('/api/admin/games', requireAdmin, (req, res) => {
   });
 });
 
-// Serve HTML pages
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Admin: Update game
+app.put('/api/admin/games/:gameId', requireAdmin, (req, res) => {
+  const { gameId } = req.params;
+  const { is_active } = req.body;
+  
+  db.run(
+    'UPDATE games SET is_active = ? WHERE id = ?',
+    [is_active, gameId],
+    function(err) {
+      if (err) {
+        return res.status(500).json({ error: 'Failed to update game' });
+      }
+      res.json({ message: 'Game updated successfully' });
+    }
+  );
 });
 
-app.get('/dashboard', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
-});
-
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
-});
+// Serve React app in production, or redirect to Vite dev server in development
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+}
 
 // Start server
 app.listen(PORT, () => {
