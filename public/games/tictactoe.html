@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe - GamesAPX</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            margin: 20px auto;
+            width: fit-content;
+        }
+        .cell {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border: 2px solid #667eea;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .cell:hover {
+            background: #f0f0f0;
+        }
+        .cell.x {
+            color: #667eea;
+        }
+        .cell.o {
+            color: #764ba2;
+        }
+        .status {
+            text-align: center;
+            font-size: 1.5em;
+            margin: 20px 0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container game-container">
+        <header>
+            <h1>🎮 Tic-Tac-Toe</h1>
+        </header>
+        
+        <div class="status" id="status">Player X's turn</div>
+        <div class="board" id="board"></div>
+        
+        <div class="game-controls">
+            <button class="btn-primary" onclick="resetGame()">New Game</button>
+            <button class="btn-secondary" onclick="window.close()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        function initBoard() {
+            const boardElement = document.getElementById('board');
+            boardElement.innerHTML = '';
+            
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.setAttribute('data-index', i);
+                cell.addEventListener('click', handleCellClick);
+                boardElement.appendChild(cell);
+            }
+        }
+
+        function handleCellClick(e) {
+            const index = e.target.getAttribute('data-index');
+            
+            if (board[index] !== '' || !gameActive) {
+                return;
+            }
+            
+            board[index] = currentPlayer;
+            e.target.textContent = currentPlayer;
+            e.target.classList.add(currentPlayer.toLowerCase());
+            
+            checkWinner();
+        }
+
+        function checkWinner() {
+            let roundWon = false;
+            
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    roundWon = true;
+                    break;
+                }
+            }
+            
+            if (roundWon) {
+                document.getElementById('status').textContent = `Player ${currentPlayer} wins! 🎉`;
+                gameActive = false;
+                submitScore(currentPlayer === 'X' ? 100 : 0);
+                return;
+            }
+            
+            if (!board.includes('')) {
+                document.getElementById('status').textContent = "It's a draw!";
+                gameActive = false;
+                submitScore(50);
+                return;
+            }
+            
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            document.getElementById('status').textContent = `Player ${currentPlayer}'s turn`;
+        }
+
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            document.getElementById('status').textContent = "Player X's turn";
+            initBoard();
+        }
+
+        async function submitScore(score) {
+            try {
+                await fetch('/api/scores', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ gameId: 1, score })
+                });
+            } catch (error) {
+                console.error('Failed to submit score:', error);
+            }
+        }
+
+        initBoard();
+    </script>
+</body>
+</html>
